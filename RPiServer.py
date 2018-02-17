@@ -161,3 +161,4 @@ while (1):
 
 	else:
 		print ("Propiedad incorrecta %s" %prop)
+		print ("test")
