@@ -4,6 +4,17 @@ from Raspi_PWM_Servo_Driver import PWM
 import time
 import atexit
 
+import socket
+
+#Variables para la conexion Cliente-Servidor
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+port = 9999
+serverSocket.bind(('', port)) #de esta forma el servidor escucha peticiones de cualquier PC en la red
+#setting amount of requests
+requestsNumber = 5
+serverSocket.listen(requestsNumber)
+
+
 # create a default object, no changes to I2C address or frequency
 mh = Raspi_MotorHAT(addr=0x6f)
 
@@ -93,7 +104,7 @@ def setDirection(direction):
 
 #Cambia la velocidad de los motores 0 - Vmax
 def setSpeed(speed):
-	auxSpeed = (int)speed
+	auxSpeed = (int)(speed)
 	if auxSpeed >= minSpeed and auxSpeed <= maxSpeed:
 		statusRegister['speed'] = (int)(speed)
 		
@@ -137,28 +148,34 @@ def checkStatusRegister():
 
 
 
+clientSocket, addr = serverSocket.accept()
 
+while True:
+	try:
+		clientMsg = clientSocket.recv(1000)
+		print clientMsg
 
+		#clientMsg viene con el formato
+		#status;speed,direction angle
+		#y la sigte linea lo descompone en un arreglo de 4 posiciones
+		#['status', 'speed', 'direction', 'angle']
+		split = clientMsg.replace(';',' ').replace(',',' ').split()
 
-while (1):
-	prop = raw_input("\ndefina propiedad a modificar (status/direction/speed/angle): ")
-	if prop == "status" or prop == "direction" or prop == "speed" or prop == "angle":
-		value = raw_input("valor para la propiedad %s: " %prop)
-		if prop == "status":
-			setStatus(value)
-		elif prop == "direction":
-			setDirection(value)
-		elif prop == "speed":
-			setSpeed(value)
-		elif prop == "angle":
-			setAngle(value)
-		
+		if len(split) == 4:
+			setStatus(split[0])
+			setSpeed(split[1])
+			setDirection(split[2])
+			setAngle(split[3])
+
 		print ("\nRegistro de estado:")
 		print (statusRegister)
 
 		checkStatusRegister()
 
+		
+	except KeyboardInterrupt:
+		clientSocket.close()
+		quit()
+    
 
-	else:
-		print ("Propiedad incorrecta %s" %prop)
-		print ("test")
+
